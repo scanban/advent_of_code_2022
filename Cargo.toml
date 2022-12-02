@@ -1,0 +1,16 @@
+[workspace.package]
+version = "0.0.1"
+authors = ["staslock"]
+description = "Advent of code 2022"
+
+[workspace]
+members = [
+    "d01_01",
+    "d01_02",
+    "d02_01",
+    "d02_02",
+    "runner"
+]
+
+[workspace.dependencies]
+itertools = "0.10.5"
