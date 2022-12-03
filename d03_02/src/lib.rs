@@ -8,7 +8,7 @@ fn solve_problem(input_data: &str) -> i32 {
         let r2:HashSet<&u8> = HashSet::from_iter(lines.next().unwrap().as_bytes());
         let r3:HashSet<&u8> = HashSet::from_iter(lines.next().unwrap().as_bytes());
 
-        result += r3.intersection(&(r1.intersection(&r2).map(|v|*v).collect::<HashSet<&u8,_>>())).map(|v|
+        result += r3.intersection(&(r1.intersection(&r2).cloned().collect())).map(|v|
             match v {
                 b'a'..=b'z' => (*v - b'a') as i32 + 1,
                 b'A'..=b'Z' => (*v - b'A') as i32 + 27,

@@ -4,8 +4,8 @@ fn solve_problem(input_data: &str) -> i32 {
     let v = input_data
         .lines().map(|l| {
         let mut chunks = l.as_bytes().chunks(l.len() / 2);
-        let lhs: HashSet<u8> = HashSet::from_iter(chunks.next().unwrap().iter().map(|v| *v));
-        let rhs: HashSet<u8> = HashSet::from_iter(chunks.next().unwrap().iter().map(|v| *v));
+        let lhs: HashSet<u8> = HashSet::from_iter(chunks.next().unwrap().into_iter().cloned());
+        let rhs: HashSet<u8> = HashSet::from_iter(chunks.next().unwrap().into_iter().cloned());
         lhs.intersection(&rhs).map(|v|
             match v {
                 b'a'..=b'z' => (v - b'a') as i32 + 1,
