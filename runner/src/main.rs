@@ -5,4 +5,6 @@ fn main() {
     println!("d02_02: {}", d02_02::solve());
     println!("d03_01: {}", d03_01::solve());
     println!("d03_02: {}", d03_02::solve());
+    println!("d04_01: {}", d04_01::solve());
+    println!("d04_02: {}", d04_02::solve());
 }
