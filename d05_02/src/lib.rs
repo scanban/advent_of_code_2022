@@ -24,7 +24,7 @@ fn solve_problem(input_data: &str) -> String {
         let move_instruction = l.split(' ').into_iter().collect::<Vec<&str>>();
         let count = move_instruction[1].parse().unwrap();
         let src: usize = move_instruction[3].parse::<usize>().unwrap() - 1;
-        let dst: usize = move_instruction[5].parse::<usize>().unwrap() - 1;;
+        let dst: usize = move_instruction[5].parse::<usize>().unwrap() - 1;
 
         let mut pack: VecDeque<u8> = VecDeque::new();
         for _ in 0..count {

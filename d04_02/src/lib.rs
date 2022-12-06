@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 fn solve_problem(input_data: &str) -> i32 {
     input_data.lines().map(|l| {
         let w: Vec<i32> = l.split(&[',', '-']).map(|v| v.parse().unwrap()).collect();
