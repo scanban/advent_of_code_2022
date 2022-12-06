@@ -46,6 +46,20 @@ name = "d05_02"
 version = "0.1.0"
 
 [[package]]
+name = "d06_01"
+version = "0.1.0"
+dependencies = [
+ "itertools",
+]
+
+[[package]]
+name = "d06_02"
+version = "0.1.0"
+dependencies = [
+ "itertools",
+]
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -74,4 +88,6 @@ dependencies = [
  "d04_02",
  "d05_01",
  "d05_02",
+ "d06_01",
+ "d06_02",
 ]
