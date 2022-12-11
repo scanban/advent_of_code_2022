@@ -25,6 +25,8 @@ members = [
     "d09_02",
     "d10_01",
     "d10_02",
+    "d11_01",
+    "d11_02",
     "runner"
 ]
 
@@ -32,3 +34,4 @@ members = [
 regex = "1.7.0"
 itertools = "0.10.5"
 scanf = "1.2.1"
+lazy_static = "1.4.0"
