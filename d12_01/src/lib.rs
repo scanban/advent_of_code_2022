@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables, unused_must_use)]
-
 use std::collections::VecDeque;
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -7,14 +5,6 @@ struct Point {
     row: usize,
     col: usize,
 }
-
-
-// impl Point {
-//     fn valid_points(point: &Point, rows: usize, columns: usize) -> Vec<Point> {
-//         let mut ret = Vec::<Point>::new();
-//         if point.row > 0 && point
-//     }
-// }
 
 struct Node {
     point: Point,
@@ -29,8 +19,7 @@ impl PartialEq for Point {
 
 fn solve_problem(input_data: &str) -> i32 {
     let lines = input_data.lines();
-    let mut result = 0;
-    let area = lines
+    let mut area = lines
         .map(|l| l.as_bytes().to_vec())
         .collect::<Vec<Vec<u8>>>();
 
@@ -43,55 +32,52 @@ fn solve_problem(input_data: &str) -> i32 {
     let mut queue: VecDeque<Node> = VecDeque::new();
 
     for row in 0..rows {
+        visited.push(Vec::<bool>::new());
         for col in 0..cols {
             if area[row][col] == b'S' {
                 starting_point = Point { row, col };
+                area[row][col] = b'a';
             }
             if area[row][col] == b'E' {
                 destination_point = Point { row, col };
+                area[row][col] = b'z';
             }
-            visited[row][col] = false;
+            visited[row].push(false);
         }
     }
 
-    let valid_points = |node: &Node| {
-        let point = &node.point;
-
-        let valid_heights = |p: &Point| {
-            area[p.col][p.row] - 1 ..=area[p.col][p.row] + 1
-        };
-        let mut ret = Vec::<Point>::new();
-        if point.row > 0 &&  valid_heights(point).contains(&area[point.row - 1][point.col]) {
-            queue.push_back(Node { point:Point{row: point.row - 1, col: point.col}, 
-                distance: node.distance + 1});
-        } 
-        if point.row + 1 < rows &&  valid_heights(point).contains(&area[point.row + 1][point.col]) {
-            queue.push_back(Node { point:Point{row: point.row + 1, col: point.col}, 
-                distance: node.distance + 1});
-        } 
-    }
-
-
-    dbg!(&starting_point);
-    dbg!(&destination_point);
-
-    queue.push_back(Node { point: starting_point, distance: 0});
+    queue.push_back(Node { point: starting_point, distance: 0 });
     visited[starting_point.row][starting_point.col] = true;
 
     while !queue.is_empty() {
-        let p = queue.front().unwrap();
+        let node = queue.pop_front().unwrap();
 
-        if p.point == destination_point {
-            return p.distance;
+        if node.point == destination_point {
+            return node.distance;
         }
-        let p = queue.pop_front().unwrap();
+        let point = &node.point;
 
+        let valid_height = |v| {
+            v <= area[point.row][point.col] + 1
+        };
 
+        let mut push_node = |row: usize, col: usize| {
+            if valid_height(area[row][col]) && !visited[row][col] {
+                queue.push_back(Node {
+                    point: Point { row, col },
+                    distance: node.distance + 1,
+                });
+                visited[row][col] = true;
+            }
+        };
 
+        if point.row > 0 { push_node(point.row - 1, point.col); }
+        if point.row + 1 < rows { push_node(point.row + 1, point.col); }
+        if point.col > 0 { push_node(point.row, point.col - 1); }
+        if point.col + 1 < cols { push_node(point.row, point.col + 1); }
+    };
 
-    }
-
-    result
+    0
 }
 
 pub fn solve() -> i32 {
@@ -105,6 +91,6 @@ mod tests {
     #[test]
     fn solve_test() {
         let result = solve_problem(include_str!("../input_test.txt"));
-        assert_eq!(result, 0);
+        assert_eq!(result, 31);
     }
 }
