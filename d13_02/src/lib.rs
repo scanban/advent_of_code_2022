@@ -64,10 +64,20 @@ fn compare_messages(lhs: &Element, rhs: &Element) -> Result {
     Result::Equal
 }
 
+//region Packet
+
 #[derive(Debug)]
 struct Packet<'a> {
     s: &'a str,
     e: Element,
+}
+
+impl Eq for Packet<'_> {}
+
+impl Ord for Packet<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 impl PartialOrd for Packet<'_> {
@@ -86,6 +96,8 @@ impl PartialEq for Packet<'_> {
         matches!(compare_messages(&self.e, &other.e), Result::Equal)
     }
 }
+
+//endregion
 
 fn solve_problem(input_data: &str) -> i32 {
     const DIVIDER_PACKETS: [&str; 2] = ["[[2]]", "[[6]]"];
@@ -106,7 +118,7 @@ fn solve_problem(input_data: &str) -> i32 {
         Packet{ s: v, e: parse_stage(&mut v.as_bytes().iter().cloned().rev().collect::<Vec<u8>>()).unwrap() }
     }));
 
-    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.sort();
 
     for i in 0..v.len() {
         if v[i].s.eq(&"[[2]]".to_string()) { result *= i as i32 + 1; }
