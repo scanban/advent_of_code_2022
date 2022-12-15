@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables)]
-
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
@@ -21,11 +19,7 @@ fn solve_problem(y_level: i32, input_data: &str) -> i32 {
         )
         .unwrap();
     }
-    let mut lines = input_data.lines();
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
-    let mut min_y = i32::MAX;
-    let mut max_y = i32::MIN;
+    let lines = input_data.lines();
 
     let sensors = lines
         .map(|l| {
@@ -36,16 +30,6 @@ fn solve_problem(y_level: i32, input_data: &str) -> i32 {
                 beacon_x: c.get(3).unwrap().as_str().parse().unwrap(),
                 beacon_y: c.get(4).unwrap().as_str().parse().unwrap(),
             };
-            min_x = min(min_x, ret.x);
-            min_x = min(min_x, ret.beacon_x);
-            min_y = min(min_y, ret.y);
-            min_y = min(min_y, ret.beacon_y);
-
-            max_x = max(max_x, ret.x);
-            max_x = max(max_x, ret.beacon_x);
-            max_y = max(max_y, ret.y);
-            max_y = max(max_y, ret.beacon_y);
-
             ret
         })
         .collect::<Vec<Sensor>>();
@@ -55,7 +39,7 @@ fn solve_problem(y_level: i32, input_data: &str) -> i32 {
 
     let mut zones = Vec::<(i32, i32)>::new();
 
-    for sensor in sensors {
+    for sensor in &sensors {
         let s_max = (sensor.x - sensor.beacon_x).abs() + (sensor.y - sensor.beacon_y).abs();
         if (sensor.y - y_level).abs() > s_max {
             continue;
@@ -71,10 +55,12 @@ fn solve_problem(y_level: i32, input_data: &str) -> i32 {
         dbg!(&zones);
     }
 
-    let mut result = -1;
+    let mut result = 0;
     for i in t_pos_x_left..=t_pos_x_right {
         if zones.iter().any(|v| i >= v.0 && i <= v.1) {
-            result += 1;
+            if !sensors.iter().any(|v| v.beacon_y == y_level && v.beacon_x == i) {
+                result += 1;
+            }
         }
     }
 
