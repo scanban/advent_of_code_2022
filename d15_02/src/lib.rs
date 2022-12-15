@@ -1,8 +1,5 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-    cmp::{max, min},
-};
 
 #[derive(Debug)]
 struct Sensor {
@@ -48,9 +45,6 @@ fn solve_problem(input_data: &str) -> i64 {
         max_y_coord = 4000000;
     }
 
-    let mut t_pos_x_left = i32::MAX;
-    let mut t_pos_x_right = i32::MIN;
-
     for y_level in 0..=max_y_coord {
         zones.clear();
         for sensor in &sensors {
@@ -60,8 +54,6 @@ fn solve_problem(input_data: &str) -> i64 {
             }
             let pos_x_left = sensor.x - (s_max - (sensor.y - y_level).abs());
             let pos_x_right = sensor.x + (s_max - (sensor.y - y_level).abs());
-            t_pos_x_left = min(t_pos_x_left, pos_x_left);
-            t_pos_x_right = max(t_pos_x_right, pos_x_right);
             zones.push((pos_x_left, pos_x_right));
         }
         zones.sort_unstable_by(|lhs, rhs| lhs.0.cmp(&rhs.0));
