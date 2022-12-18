@@ -183,6 +183,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "d18_01"
+version = "0.1.0"
+
+[[package]]
+name = "d18_02"
+version = "0.1.0"
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -264,4 +272,6 @@ dependencies = [
  "d16_02",
  "d17_01",
  "d17_02",
+ "d18_01",
+ "d18_02",
 ]
