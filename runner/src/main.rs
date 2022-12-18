@@ -27,7 +27,17 @@ fn main() {
     println!("d13_02: {}", d13_02::solve());
     println!("d14_01: {}", d14_01::solve());
     println!("d14_02: {}", d14_02::solve());
-*/
     println!("d15_01: {}", d15_01::solve());
     println!("d15_02: {}", d15_02::solve());
+*/
+
+/*
+    println!("d16_01: {}", d16_01::solve());
+    println!("d16_02: {}", d16_02::solve());
+*/
+/*
+    println!("d17_01: {}", d17_01::solve());
+ */
+    println!("d17_02: {}", d17_02::solve());
+
 }
