@@ -225,6 +225,10 @@ dependencies = [
 [[package]]
 name = "d21_02"
 version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
 
 [[package]]
 name = "either"
