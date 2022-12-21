@@ -12,6 +12,7 @@ enum MOperation {
     OP_MINUS { lhs: String, rhs: String },
     OP_MUL { lhs: String, rhs: String },
     OP_DIV { lhs: String, rhs: String },
+    OP_EQ { lhs: String, rhs: String },
 }
 
 #[derive(Debug, Clone)]
@@ -21,6 +22,7 @@ enum COperations {
     OP_MINUS,
     OP_DIV,
     OP_MUL,
+    OP_EQ,
 }
 
 fn solve_problem(input_data: &str) -> i64 {
@@ -90,19 +92,24 @@ fn solve_problem(input_data: &str) -> i64 {
                 operations_stack.push(COperations::OP_PLUS);
                 operations_stack.push(COperations::RESOLVE(lhs.clone()));
                 operations_stack.push(COperations::RESOLVE(rhs.clone()));
-            }
+            },
             MOperation::OP_MINUS { lhs, rhs } => {
                 operations_stack.push(COperations::OP_MINUS);
                 operations_stack.push(COperations::RESOLVE(lhs.clone()));
                 operations_stack.push(COperations::RESOLVE(rhs.clone()));
-            }
+            },
             MOperation::OP_MUL { lhs, rhs } => {
                 operations_stack.push(COperations::OP_MUL);
                 operations_stack.push(COperations::RESOLVE(lhs.clone()));
                 operations_stack.push(COperations::RESOLVE(rhs.clone()));
-            }
+            },
             MOperation::OP_DIV { lhs, rhs } => {
                 operations_stack.push(COperations::OP_DIV);
+                operations_stack.push(COperations::RESOLVE(lhs.clone()));
+                operations_stack.push(COperations::RESOLVE(rhs.clone()));
+            },
+            MOperation::OP_EQ { lhs, rhs } => {
+                operations_stack.push(COperations::OP_EQ);
                 operations_stack.push(COperations::RESOLVE(lhs.clone()));
                 operations_stack.push(COperations::RESOLVE(rhs.clone()));
             }
@@ -110,8 +117,18 @@ fn solve_problem(input_data: &str) -> i64 {
         };
     };
 
-    let root = monkeys.get("root").unwrap();
-    process_operation(root, &mut operations_stack, &mut operand_stack);
+    let new_root_op = match monkeys.get("root").unwrap() {
+        MOperation::OP_PLUS { lhs, rhs } => 
+            MOperation::OP_EQ { lhs: lhs.clone(), rhs: rhs.clone() },
+        MOperation::OP_MINUS { lhs, rhs } => 
+            MOperation::OP_EQ { lhs: lhs.clone(), rhs: rhs.clone() },
+        MOperation::OP_MUL { lhs, rhs } => 
+            MOperation::OP_EQ { lhs: lhs.clone(), rhs: rhs.clone() },
+        MOperation::OP_DIV { lhs, rhs } => 
+            MOperation::OP_EQ { lhs: lhs.clone(), rhs: rhs.clone() },
+        _ => unreachable!(),
+    }; 
+    process_operation(&new_root_op, &mut operations_stack, &mut operand_stack);
 
     while !operations_stack.is_empty() {
         let e = operations_stack.pop().unwrap();
@@ -139,6 +156,12 @@ fn solve_problem(input_data: &str) -> i64 {
                 let lhs = operand_stack.pop().unwrap();
                 let rhs = operand_stack.pop().unwrap();
                 operand_stack.push(lhs / rhs);
+            },
+            COperations::OP_EQ => { 
+                let lhs = operand_stack.pop().unwrap();
+                let rhs = operand_stack.pop().unwrap();
+                println!("lhs: {}, rhs: {}", lhs, rhs);
+                operand_stack.push((lhs == rhs) as i64);
             },
         }
     }
