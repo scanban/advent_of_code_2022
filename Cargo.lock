@@ -231,6 +231,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "d22_01"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "d22_02"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,4 +336,6 @@ dependencies = [
  "d20_02",
  "d21_01",
  "d21_02",
+ "d22_01",
+ "d22_02",
 ]
