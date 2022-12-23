@@ -145,7 +145,7 @@ fn jump(mover: & mut Mover, m_next_x: i32, m_next_y: i32, maze: &Vec<Vec<u8>>) {
         }
         // side 3:left:left -> side 0:down:up
         else if Side::SIDE_3.y_in_side(mover.y) {
-            next_y = ;
+            next_y = 0;
             next_x = mover.y - 150 ;
             next_direction = Mover::DIRECTION[Mover::UP];
         }
