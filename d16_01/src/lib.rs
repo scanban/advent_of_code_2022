@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables)]
-
 use std::cmp::max;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use lazy_static::lazy_static;
@@ -7,10 +5,15 @@ use regex::Regex;
 
 #[derive(Debug)]
 struct Valve<'a> {
-    name: &'a str,
     flow_rate: i32,
     lead_to: Vec<&'a str>,
     distances: BTreeMap<String, i32>,
+}
+
+#[derive(Debug)]
+struct BinaryValve {
+    flow_rate: i32,
+    distances: BTreeMap<u8, i32>,
 }
 
 
@@ -42,136 +45,49 @@ fn bfs(src: &str, dst: &str, valves: &BTreeMap<&str, Valve>) -> i32 {
 }
 
 const START_NODE: &str = "AA";
-
-fn calc_permutation(order: &[&str], valves: &BTreeMap<&str, Valve>) -> i32 {
-    let mut ret = 0;
-    let mut ticks = 30;
-    let mut start_node = START_NODE;
-
-    if cfg!(test) {
-        println!("{:?}", order);
-    }
-
-    for i in 0..order.len() {
-        let current_node = order[i];
-
-        let travel_open_ticks = valves.get(start_node).unwrap()
-            .distances.get(current_node).unwrap() + 1;
-        ticks -= travel_open_ticks;
-        if ticks <= 0 {
-            break;
-        }
-        ret += ticks * valves.get(current_node).unwrap().flow_rate;
-
-        start_node = current_node;
-    }
-    ret
-}
+const SIMULATION_TICKS: i32 = 30;
 
 fn fill_distances(valve: &str, valves: &BTreeMap<&str, Valve>) -> BTreeMap<String, i32> {
-    let mut ret = BTreeMap::<String, i32>::new();
-
-    valves.iter().filter(|&(&k, v)| !k.eq(valve))
-        .map(|(&k, v)| (k.to_string(), (bfs(valve, k, valves))))
+    valves.iter().filter(|&(&k, _)| !k.eq(valve))
+        .map(|(&k, _)| (k.to_string(), (bfs(valve, k, valves))))
         .collect()
 }
 
-fn permutate2(n:usize, valve_names: &mut Vec<&str>, valves: &BTreeMap<&str, Valve>) -> i32 {
-    let mut translation = valves.iter()
-        .map(|(&k, v)| k)
-        .enumerate()
-        .map(|(i, n)| (n, i as u8)).collect::<BTreeMap<&str, u8>>();
-
-    let mut flows = Vec::<i32>::new();
-    flows.resize(translation.len(), 0);
-    translation.iter().for_each(|(&k, v)| {
-        flows[*v as usize] = valves[k].flow_rate;
-    });
-
-    let mut valve_ids = valve_names.iter().map(|&k| translation[k]).collect::<Vec<u8>>();
-
-
-    let mut distances = Vec::<Vec<i32>>::new();
-    distances.resize(translation.len(), Vec::<i32>::new());
-    translation.iter().for_each(|(&k, v)| {
-        let e = & mut distances[translation[k] as usize];
-        let valve = &valves[k];
-
-        e.resize(translation.len(), 0);
-        valve.distances.iter().for_each(|(k, v)|{
-            e[translation[k.as_str()] as usize] = *v;
-        })
-    });
-
-    let mut stack = (0..n).map(|_| 0).collect::<Vec<usize>>();
-    let mut sp = 1usize;
-    let mut p = 0u64;
-
-    let mut start_node = translation[START_NODE];
+fn permutate2(start_node: u8, binary_valves: &BTreeMap<u8, BinaryValve>) -> i32 {
+    #[derive(Debug)]
+    struct State {
+        valve_id: u8,
+        ticks: i32,
+        open_valves: u64,
+        pressure: i32,
+    }
     let mut max_pressure = 0;
+    let mut queue = VecDeque::<State>::new();
 
-    while sp < n {
-        if stack[sp] < sp {
-            if sp & 1 == 0 {
-                valve_ids.swap(0, sp);
-            } else {
-                valve_ids.swap(stack[sp], sp);
-            }
+    queue.push_back(State { ticks: SIMULATION_TICKS, valve_id: start_node, open_valves: 0, pressure: 0 });
 
-            let mut ticks = 30;
-            let mut pressure = 0;
-            for i in 0..valve_ids.len() {
-                let current_node = valve_ids[i];
-                let travel_open_ticks = distances[start_node as usize][current_node as usize] + 1;
-                ticks -= travel_open_ticks;
-                if ticks <= 0 {
-                    break;
-                }
-                pressure += flows[current_node as usize] * ticks;
-                start_node = current_node;
-            }
-            max_pressure = max(max_pressure, pressure);
-            p += 1;
-            if p % 100_000_000 == 0 {
-                println!("{}", p);
-            }
-            stack[sp] += 1;
-            sp = 1;
-        } else {
-            stack[sp] = 0;
-            sp += 1;
+    while !queue.is_empty() {
+        let current_node = queue.pop_front().unwrap();
+        max_pressure = max(max_pressure, current_node.pressure);
+
+        for (&node_id, distance) in &binary_valves.get(&current_node.valve_id).unwrap().distances {
+            if current_node.open_valves & (1u64 << node_id) != 0 { continue; }
+            let ticks = current_node.ticks - (distance + 1);
+            if ticks <= 0 { continue; }
+
+            let bnode = binary_valves.get(&node_id).unwrap();
+            if bnode.flow_rate == 0 { continue; }
+            queue.push_back(State {
+                ticks,
+                valve_id: node_id,
+                open_valves: current_node.open_valves | (1u64 << node_id),
+                pressure: bnode.flow_rate * ticks + current_node.pressure,
+            });
         }
     }
 
-    max_pressure
-}
+    //dbg!(&cache);
 
-fn permutate(n: usize, valve_names: &mut Vec<&str>, valves: &BTreeMap<&str, Valve>) -> i32 {
-    let mut stack = (0..n).map(|_| 0).collect::<Vec<usize>>();
-    let mut sp = 1usize;
-    let mut p = 0u64;
-
-    let mut max_pressure = calc_permutation(&valve_names, valves);
-
-    while sp < n {
-        if stack[sp] < sp {
-            if sp & 1 == 0 {
-                valve_names.swap(0, sp);
-            } else {
-                valve_names.swap(stack[sp], sp);
-            }
-            max_pressure = max(max_pressure, calc_permutation(&valve_names, valves));
-            p += 1;
-            if p % 100_000_000 == 0 {
-                println!("{}", p);
-            }
-            stack[sp] += 1;
-            sp = 1;
-        } else {
-            stack[sp] = 0;
-            sp += 1;
-        }
-    }
     max_pressure
 }
 
@@ -189,24 +105,36 @@ fn solve_problem(input_data: &str) -> i32 {
         let c = RE_VALVES.captures(l).unwrap();
         let name = c.get(1).unwrap().as_str();
         (name, Valve {
-            name,
             flow_rate: c.get(2).unwrap().as_str().parse().unwrap(),
             lead_to: c.get(3).unwrap().as_str().split(", ").collect::<Vec<&str>>(),
             distances: BTreeMap::new(),
         })
     }).collect::<BTreeMap<&str, Valve>>();
 
-    for v in valves.iter().map(|(&k, v)| k).collect::<Vec<&str>>() {
+    for v in valves.iter().map(|(&k, _)| k).collect::<Vec<&str>>() {
         valves.get_mut(v).unwrap().distances = fill_distances(v, &valves);
     }
 
-    //dbg!(&valves);
+    let translation = valves.iter()
+        .map(|(&k, _)| k)
+        .enumerate()
+        .map(|(i, n)| (n, i as u8)).collect::<BTreeMap<&str, u8>>();
+
+    let binary_valves = valves.iter().map(|(&k, v)| {
+        let distances = v.distances.iter().map(|(k, v)| {
+            (translation[k.as_str()], *v)
+        }).collect::<BTreeMap<u8, i32>>();
+        (translation[k], BinaryValve { flow_rate: v.flow_rate, distances })
+    }).collect::<BTreeMap<u8, BinaryValve>>();
+
+    //dbg!(&binary_valves);
+    println!("{}", binary_valves.len());
 
     let mut orders = Vec::<&str>::new();
-    valves.iter().filter(|(&k, v)|{ v.flow_rate != 0 })
-        .for_each(|(&k, v)| orders.push(k));
+    valves.iter().filter(|(_, v)| { v.flow_rate != 0 })
+        .for_each(|(&k, _)| orders.push(k));
 
-    permutate2(orders.len(), &mut orders, &valves)
+    permutate2(translation[START_NODE], &binary_valves)
 }
 
 pub fn solve() -> i32 {
