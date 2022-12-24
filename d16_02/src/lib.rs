@@ -124,7 +124,7 @@ fn solve_problem(input_data: &str) -> i32 {
         .map(|(i, n)| (n, i as u8)).collect::<BTreeMap<&str, u8>>();
 
     let binary_valves = valves.iter().map(|(&k, v)| {
-        let distances = v.distances.iter().filter(|&(k, v)| {
+        let distances = v.distances.iter().filter(|&(k, _)| {
             translation.get(k.as_str()).is_some()
         }).map(|(k, v)| {
             (translation[k.as_str()], *v)
