@@ -20,27 +20,47 @@ struct Mover {
     y: i32,
     dx: i32,
     dy: i32,
-    direction_id: usize,
+    direction: Direction,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum Direction {
+    RIGHT = 0,
+    DOWN = 1,
+    LEFT = 2,
+    UP = 3,
+}
+
+impl Direction {
+    fn from_i32(v: i32) -> Direction {
+        match v {
+            0 => Direction::RIGHT,
+            1 => Direction::DOWN,
+            2 => Direction::LEFT,
+            3 => Direction::UP,
+            _ => unreachable!()
+        }
+    }
 }
 
 impl Mover {
     const DIRECTION: [(i32, i32); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
-    const RIGHT: usize = 0;
-    const DOWN: usize = 1;
-    const LEFT: usize = 2;
-    const UP: usize = 3;
+
+    fn deltas(direction: &Direction) -> (i32, i32) {
+        Mover::DIRECTION[*direction as usize]
+    }
 
     fn rotate(&mut self, direction: &MoveInstruction) {
         match direction {
             MoveInstruction::R => {
-                self.direction_id = if self.direction_id < 3 { self.direction_id + 1 } else { 0 };
+                self.direction = if (self.direction as i32) < 3 { Direction::from_i32(self.direction as i32 + 1) } else { Direction::from_i32(0) };
             }
             MoveInstruction::L => {
-                self.direction_id = if self.direction_id > 0 { self.direction_id - 1 } else { 3 };
+                self.direction = if (self.direction as i32) > 0 { Direction::from_i32(self.direction as i32 - 1) } else { Direction::from_i32(3) };
             }
             _ => unreachable!()
         }
-        (self.dx, self.dy) = Mover::DIRECTION[self.direction_id];
+        (self.dx, self.dy) = Mover::DIRECTION[self.direction as usize];
     }
 }
 
@@ -58,8 +78,10 @@ impl Mover {
 
  */
 
+const SIDE_MAX: i32 = 49;
 
-fn jump(mover: & mut Mover, m_next_x: i32, m_next_y: i32, maze: &Vec<Vec<u8>>) {
+fn jump(mover: &mut Mover, maze: &Vec<Vec<u8>>) {
+    #[derive(Debug, Eq, PartialEq)]
     struct Side {
         top_y: i32,
         top_x: i32,
@@ -67,88 +89,106 @@ fn jump(mover: & mut Mover, m_next_x: i32, m_next_y: i32, maze: &Vec<Vec<u8>>) {
         bot_x: i32,
     }
     impl Side {
-        const SIDE_0: Side = Side{top_y: 0, top_x: 50, bot_y: 50, bot_x: 100};
-        const SIDE_1: Side = Side{top_y: 50, top_x: 50, bot_y: 100, bot_x: 100};
-        const SIDE_2: Side = Side{top_y: 100, top_x: 50, bot_y: 150, bot_x: 100};
-        const SIDE_3: Side = Side{top_y: 150, top_x: 0, bot_y: 200, bot_x: 50};
-        const SIDE_4: Side = Side{top_y: 0, top_x: 100, bot_y: 50, bot_x: 150};
-        const SIDE_5: Side = Side{top_y: 100, top_x: 0, bot_y: 150, bot_x: 50};
+        const SIDE_0: Side = Side { top_y: 0, top_x: 50, bot_y: 50 - 1, bot_x: 100 - 1 };
+        const SIDE_1: Side = Side { top_y: 50, top_x: 50, bot_y: 100 - 1, bot_x: 100 - 1 };
+        const SIDE_2: Side = Side { top_y: 100, top_x: 50, bot_y: 150 - 1, bot_x: 100 - 1 };
+        const SIDE_3: Side = Side { top_y: 150, top_x: 0, bot_y: 200 - 1, bot_x: 50 - 1 };
+        const SIDE_4: Side = Side { top_y: 0, top_x: 100, bot_y: 50 - 1, bot_x: 150 - 1 };
+        const SIDE_5: Side = Side { top_y: 100, top_x: 0, bot_y: 150 - 1, bot_x: 50 - 1 };
 
         fn x_in_side(&self, x: i32) -> bool {
-            x >= self.top_x && x < self.bot_x
+            x >= self.top_x && x <= self.bot_x
         }
         fn y_in_side(&self, y: i32) -> bool {
-            y >= self.top_y && y < self.bot_y
+            y >= self.top_y && y <= self.bot_y
+        }
+
+        fn in_side(&self, x: i32, y: i32) -> bool {
+            self.x_in_side(x) && self.y_in_side(y)
+        }
+
+        fn which_side(x: i32, y: i32) -> &'static Side {
+            const SIDES: [Side; 6] = [Side::SIDE_0, Side::SIDE_1, Side::SIDE_2, Side::SIDE_3, Side::SIDE_4, Side::SIDE_5];
+
+            SIDES.iter().find(|v| v.in_side(x, y)).unwrap()
         }
     }
+    struct WormHole {
+        s1: Side,
+        s2: Side,
+        // x, y -> (x, y)
+        coords: fn(i32, i32) -> (i32, i32),
+        dir: Direction,
+        new_dir: Direction,
+    }
 
-    let mut next_x = 0;
-    let mut next_y = 0;
-    let mut next_direction = (0, 0); // dx, dy
+    const WMS: [WormHole; 24] = [
+        // 0
+        WormHole { s1: Side::SIDE_0, s2: Side::SIDE_5, dir: Direction::LEFT, new_dir: Direction::RIGHT, coords: |x, y| (0, SIDE_MAX - y) },
+        WormHole { s1: Side::SIDE_0, s2: Side::SIDE_4, dir: Direction::RIGHT, new_dir: Direction::RIGHT, coords: |x, y| (0, y) },
+        WormHole { s1: Side::SIDE_0, s2: Side::SIDE_3, dir: Direction::UP, new_dir: Direction::RIGHT, coords: |x, y| (0, x) },
+        WormHole { s1: Side::SIDE_0, s2: Side::SIDE_1, dir: Direction::DOWN, new_dir: Direction::DOWN, coords: |x, y| (x, 0) },
 
-    if next_y < 0 || mover.direction_id == Mover::UP && maze[next_y as usize][mover.x as usize] == EMPTY_TILE {
-        // side 0:top:up -> side 3:left:right
-        if Side::SIDE_0.x_in_side(mover.x) {
-            next_y = mover.x + 100;
-            next_x = 0;
-            next_direction = Mover::DIRECTION[Mover::RIGHT];
+        // 1
+        WormHole { s1: Side::SIDE_1, s2: Side::SIDE_5, dir: Direction::LEFT, new_dir: Direction::DOWN, coords: |x, y| (y, 0) },
+        WormHole { s1: Side::SIDE_1, s2: Side::SIDE_4, dir: Direction::RIGHT, new_dir: Direction::UP, coords: |x, y| (y, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_1, s2: Side::SIDE_0, dir: Direction::UP, new_dir: Direction::UP, coords: |x, y| (x, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_1, s2: Side::SIDE_2, dir: Direction::DOWN, new_dir: Direction::DOWN, coords: |x, y| (x, 0) },
+
+        // 2
+        WormHole { s1: Side::SIDE_2, s2: Side::SIDE_5, dir: Direction::LEFT, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, y) },
+        WormHole { s1: Side::SIDE_2, s2: Side::SIDE_4, dir: Direction::RIGHT, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, SIDE_MAX - y) },
+        WormHole { s1: Side::SIDE_2, s2: Side::SIDE_1, dir: Direction::UP, new_dir: Direction::UP, coords: |x, y| (x, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_2, s2: Side::SIDE_3, dir: Direction::DOWN, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, x) },
+
+        // 3
+        WormHole { s1: Side::SIDE_3, s2: Side::SIDE_0, dir: Direction::LEFT, new_dir: Direction::DOWN, coords: |x, y| (y, 0) },
+        WormHole { s1: Side::SIDE_3, s2: Side::SIDE_2, dir: Direction::RIGHT, new_dir: Direction::UP, coords: |x, y| (y, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_3, s2: Side::SIDE_5, dir: Direction::UP, new_dir: Direction::UP, coords: |x, y| (x, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_3, s2: Side::SIDE_4, dir: Direction::DOWN, new_dir: Direction::DOWN, coords: |x, y| (x, 0) },
+
+        // 4
+        WormHole { s1: Side::SIDE_4, s2: Side::SIDE_0, dir: Direction::LEFT, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, y) },
+        WormHole { s1: Side::SIDE_4, s2: Side::SIDE_2, dir: Direction::RIGHT, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, SIDE_MAX - y) },
+        WormHole { s1: Side::SIDE_4, s2: Side::SIDE_3, dir: Direction::UP, new_dir: Direction::UP, coords: |x, y| (x, SIDE_MAX) },
+        WormHole { s1: Side::SIDE_4, s2: Side::SIDE_1, dir: Direction::DOWN, new_dir: Direction::LEFT, coords: |x, y| (SIDE_MAX, x) },
+
+        // 5
+        WormHole { s1: Side::SIDE_5, s2: Side::SIDE_0, dir: Direction::LEFT, new_dir: Direction::RIGHT, coords: |x, y| (0, SIDE_MAX - y) },
+        WormHole { s1: Side::SIDE_5, s2: Side::SIDE_2, dir: Direction::RIGHT, new_dir: Direction::RIGHT, coords: |x, y| (0, y) },
+        WormHole { s1: Side::SIDE_5, s2: Side::SIDE_1, dir: Direction::UP, new_dir: Direction::RIGHT, coords: |x, y| (0, x) },
+        WormHole { s1: Side::SIDE_5, s2: Side::SIDE_3, dir: Direction::DOWN, new_dir: Direction::DOWN, coords: |x, y| (x, 0) },
+    ];
+
+    let mut next_x;
+    let mut next_y;
+    let mut next_direction: Direction; // dx, dy
+
+    let side = Side::which_side(mover.x, mover.y);
+    if (mover.x == side.top_x && mover.direction == Direction::LEFT)
+        || (mover.x == side.bot_x && mover.direction == Direction::RIGHT)
+        || (mover.y == side.top_y && mover.direction == Direction::UP)
+        || (mover.y == side.bot_y && mover.direction == Direction::DOWN) {
+        if cfg!(test) {
+            println!("Jump");
         }
-        // side 4:top:up -> side 3:bot:up
-        else if Side::SIDE_4.x_in_side(mover.x) {
-            next_y = 199;
-            next_x = mover.x - 100;
-            next_direction = Mover::DIRECTION[Mover::UP];
-        }
-        // side 5:top:up -> side 1:left:right
-        else if Side::SIDE_5.x_in_side(mover.x) {
-            next_y = mover.x + 50;
-            next_x = 50;
-            next_direction = Mover::DIRECTION[Mover::RIGHT];
-        }
-    } else if next_y >= maze.len() as i32 || mover.direction_id == Mover::DOWN && maze[next_y as usize][mover.x as usize] == EMPTY_TILE {
-        // side 4:bot:down -> side 1:right:left
-        if Side::SIDE_4.x_in_side(mover.x) {
-            next_y = mover.x - 100 + 50;
-            next_x = 99;
-            next_direction = Mover::DIRECTION[Mover::LEFT];
-        }
-        // side 2:bot:down -> side 3:right:left
-        else if Side::SIDE_2.x_in_side(mover.x) {
-            next_y = mover.x - 50 + 150;
-            next_x = 49;
-            next_direction = Mover::DIRECTION[Mover::LEFT];
-        }
-        // side 3:bot:down -> side 4:top:down
-        else if Side::SIDE_3.x_in_side(mover.x) {
-            next_y = 0;
-            next_x = mover.x + 100;
-            next_direction = Mover::DIRECTION[Mover::DOWN];
-        }
-    } else if next_x < 0 || mover.direction_id == Mover::LEFT && maze[next_y as usize][mover.x as usize] == EMPTY_TILE {
-        // side 0:left:left -> side 5:left:left
-        if Side::SIDE_0.y_in_side(mover.y) {
-            next_y = 149 - mover.y;
-            next_x = 49;
-            next_direction = Mover::DIRECTION[Mover::RIGHT];
-        }
-        // side 1:left:left -> side 5:top:down
-        else if Side::SIDE_1.y_in_side(mover.y) {
-            next_y = 100;
-            next_x = mover.y - 50;
-            next_direction = Mover::DIRECTION[Mover::DOWN];
-        }
-        // side 5:left:left -> side 0:right:left
-        else if Side::SIDE_5.y_in_side(mover.y) {
-            next_y = mover.y - 100;
-            next_x = 99;
-            next_direction = Mover::DIRECTION[Mover::LEFT];
-        }
-        // side 3:left:left -> side 0:down:up
-        else if Side::SIDE_3.y_in_side(mover.y) {
-            next_y = 0;
-            next_x = mover.y - 150 ;
-            next_direction = Mover::DIRECTION[Mover::UP];
-        }
+
+        let w = WMS.iter().find(|v| v.s1 == *side && v.dir == mover.direction).unwrap();
+        (next_x, next_y) = (w.coords)(mover.x - side.top_x, mover.y - side.top_y);
+        next_x += w.s2.top_x;
+        next_y += w.s2.top_y;
+        next_direction = w.new_dir;
+    } else {
+        next_x = mover.x + mover.dx;
+        next_y = mover.y + mover.dy;
+        next_direction = mover.direction;
+    }
+
+    if maze[next_y as usize][next_x as usize] == OPEN_TILE {
+        mover.x = next_x;
+        mover.y = next_y;
+        mover.direction = next_direction;
+        (mover.dx, mover.dy) = Mover::deltas(&mover.direction);
     }
 }
 
@@ -167,8 +207,11 @@ fn solve_problem(input_data: &str) -> i32 {
     }
 
     let max_line_len = maze.iter().map(|v| v.len()).max().unwrap();
-    let cube_side_len = maze.iter().map(|v| v.iter().filter(|&&c|c != b' ').count()).min().unwrap();
-    dbg!(cube_side_len);
+    let cube_side_len = maze.iter().map(|v| v.iter().filter(|&&c| c != b' ').count()).min().unwrap();
+
+    if cfg!(test) {
+        dbg!(cube_side_len);
+    }
 
     maze.iter_mut().for_each(|v| v.resize(max_line_len, b' '));
 
@@ -191,42 +234,28 @@ fn solve_problem(input_data: &str) -> i32 {
         y: 0,
         dx: 1,
         dy: 0,
-        direction_id: Mover::RIGHT,
+        direction: Direction::RIGHT,
     };
 
     for instr in move_instructions {
         match instr {
             MoveInstruction::STEPS(steps) => {
                 for _ in 0..steps {
-                    let mut next_x = mover.x;
-                    let mut next_y = mover.y;
-
-                    loop {
-                        next_x = (next_x + mover.dx) % maze[0].len() as i32;
-                        if next_x < 0 { next_x = maze[0].len() as i32 - 1; }
-
-                        next_y = (next_y + mover.dy) % maze.len() as i32;
-                        if next_y < 0 { next_y = maze.len() as i32 - 1; }
-
-                        if maze[next_y as usize][next_x as usize] != b' ' { break; }
-                    }
-                    if maze[next_y as usize][next_x as usize] == WALL_TILE { break; }
-                    mover.x = next_x;
-                    mover.y = next_y;
+                    jump(&mut mover, &maze);
                 }
             }
             MoveInstruction::R | MoveInstruction::L => { mover.rotate(&instr); }
         }
-        //if cfg!(test) {
-        println!("{:?} -> {:?}", instr, mover);
-        // }
+        if cfg!(test) {
+            println!("{:?} -> {:?}", instr, mover);
+        }
     }
 
 
-    //if cfg!(test) {
-    dbg!(&mover);
-    //}
-    let result = 1000 * (mover.y + 1) + 4 * (mover.x + 1) + mover.direction_id as i32;
+    if cfg!(test) {
+        dbg!(&mover);
+    }
+    let result = 1000 * (mover.y + 1) + 4 * (mover.x + 1) + mover.direction as i32;
 
     result
 }
@@ -242,7 +271,7 @@ mod tests {
 
     #[test]
     fn solve_test() {
-        let result = solve_problem(include_str!("../input_test.txt"));
+        let result = solve_problem(include_str!("../input.txt"));
         assert_eq!(result, 6032);
     }
 }

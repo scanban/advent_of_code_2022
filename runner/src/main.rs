@@ -69,5 +69,5 @@ fn main() {
         println!("d24_01: {}", d24_01::solve());
         println!("d24_02: {}", d24_02::solve());
      */
-    println!("d25_01: {}", d25_01::solve())
+    println!("d22_02: {}", d22_02::solve())
 }
